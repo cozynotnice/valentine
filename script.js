@@ -2,31 +2,18 @@ const yesBtn = document.getElementById("yesBtn");
 const noBtn = document.getElementById("noBtn");
 const buttons = document.querySelector(".buttons");
 const celebrate = document.getElementById("celebrate");
+const fxLayer = document.getElementById("fxLayer");
 
 let scale = 1;
 
-/* ---------------- Utility ---------------- */
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-/* ---------------- YES grows ---------------- */
+/* ---------- NO runs away + YES grows ---------- */
 function growYes() {
   scale = clamp(scale + 0.12, 1, 3);
   yesBtn.style.transform = `scale(${scale})`;
-}
-
-/* ---------------- NO shrink + dodge ---------------- */
-function updateNoScale(clientX, clientY) {
-  const r = noBtn.getBoundingClientRect();
-  const cx = (r.left + r.right) / 2;
-  const cy = (r.top + r.bottom) / 2;
-
-  const dist = Math.hypot(clientX - cx, clientY - cy);
-  const t = clamp(dist / 220, 0, 1);
-  const s = clamp(0.45 + 0.55 * t, 0.45, 1);
-
-  noBtn.style.transform = `translate(-50%, -50%) scale(${s})`;
 }
 
 function moveNoAway(clientX, clientY) {
@@ -60,102 +47,59 @@ function moveNoAway(clientX, clientY) {
 
   noBtn.style.left = `${nx}px`;
   noBtn.style.top = `${ny}px`;
+  noBtn.style.transform = "translate(-50%, -50%)";
 }
-
-buttons.addEventListener("mousemove", (e) => {
-  updateNoScale(e.clientX, e.clientY);
-});
 
 noBtn.addEventListener("mouseenter", (e) => {
   growYes();
   moveNoAway(e.clientX, e.clientY);
 });
-
-noBtn.addEventListener("mousemove", (e) => {
-  updateNoScale(e.clientX, e.clientY);
+noBtn.addEventListener("mousemove", (e) => moveNoAway(e.clientX, e.clientY));
+noBtn.addEventListener("click", (e) => {
+  growYes();
   moveNoAway(e.clientX, e.clientY);
 });
 
-/* ---------------- PERFECT INFINITE LOVE ENGINE ---------------- */
+/* ---------- Celebration FX (INSIDE CARD ONLY) ---------- */
+const LOVE = ["💖","💗","💘","💕","💞","❤️","✨","🌸","🥰","😘","💝","🎉"];
 
-let canvas, ctx;
-let particles = [];
-let animationRunning = false;
+function spawnFX(count = 70) {
+  const rect = fxLayer.getBoundingClientRect();
 
-const EMOJIS = ["💖","💗","💘","💕","💞","❤️","✨","🌸","🥰","😘"];
-const PARTICLE_COUNT = 140; // fills whole screen evenly
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement("div");
+    el.className = "fx";
+    el.textContent = LOVE[(Math.random() * LOVE.length) | 0];
 
-function initCanvas() {
-  canvas = document.createElement("canvas");
-  canvas.style.position = "fixed";
-  canvas.style.top = "0";
-  canvas.style.left = "0";
-  canvas.style.pointerEvents = "none";
-  canvas.style.zIndex = "9998";
-  document.body.appendChild(canvas);
+    const startX = Math.random() * rect.width;
+    const startY = rect.height + 20;
+    const driftX = (Math.random() * 240 - 120);
+    const duration = 900 + Math.random() * 700;
+    const size = 16 + Math.random() * 18;
+    const rot = (Math.random() * 360 - 180);
 
-  ctx = canvas.getContext("2d");
+    el.style.left = `${startX}px`;
+    el.style.top = `${startY}px`;
+    el.style.fontSize = `${size}px`;
+    el.style.opacity = "1";
 
-  resizeCanvas();
-  window.addEventListener("resize", resizeCanvas);
-}
+    fxLayer.appendChild(el);
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
+    el.animate(
+      [
+        { transform: "translate(0,0) rotate(0deg)", opacity: 1 },
+        { transform: `translate(${driftX}px, -${rect.height + 120}px) rotate(${rot}deg)`, opacity: 0 }
+      ],
+      { duration, easing: "ease-out", fill: "forwards" }
+    );
 
-function createParticles() {
-  particles = [];
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size: 18 + Math.random() * 22,
-      speed: 0.5 + Math.random() * 0.8,
-      drift: (Math.random() - 0.5) * 0.4,
-      emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)]
-    });
+    setTimeout(() => el.remove(), duration + 50);
   }
 }
 
-function update() {
-  if (!animationRunning) return;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  for (let p of particles) {
-    p.y -= p.speed;
-    p.x += p.drift;
-
-    // recycle instantly when leaving top
-    if (p.y < -40) {
-      p.y = canvas.height + 40;
-      p.x = Math.random() * canvas.width; // random across entire width
-    }
-
-    ctx.font = `${p.size}px serif`;
-    ctx.fillText(p.emoji, p.x, p.y);
-  }
-
-  requestAnimationFrame(update);
-}
-
-function startLoveEngine() {
-  if (animationRunning) return;
-
-  initCanvas();
-  createParticles();
-  animationRunning = true;
-  requestAnimationFrame(update);
-}
-
-/* ---------------- YES CLICK ---------------- */
-
+/* ---------- YES click ---------- */
 yesBtn.addEventListener("click", () => {
-
+  // hide question + hint + buttons
   const question = document.getElementById("question");
   if (question) question.style.display = "none";
 
@@ -165,7 +109,9 @@ yesBtn.addEventListener("click", () => {
   yesBtn.style.display = "none";
   noBtn.style.display = "none";
 
+  // show yay
   celebrate.classList.remove("hidden");
 
-  startLoveEngine();
+  // run FX after UI updates (no perceived delay)
+  requestAnimationFrame(() => spawnFX(90));
 });
