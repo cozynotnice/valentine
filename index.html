@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Valentine</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <div class="card">
+    <div class="card" id="card">
       <div class="emoji">🐱💗</div>
+
       <h1 id="question">Idman, will you be my valentine?</h1>
 
       <div class="buttons">
@@ -21,9 +22,11 @@
 
       <div id="celebrate" class="hidden">
         <h2>YAY! 🎉</h2>
-        <img src="IMG_5631.JPEG">
+        <img src="IMG_5631.JPEG" alt="celebration" />
       </div>
 
+      <!-- effects stay inside the card -->
+      <div id="fxLayer" class="fx-layer" aria-hidden="true"></div>
     </div>
   </div>
 
